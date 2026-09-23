@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>完整日誌點名系統</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: #ffffff;
+        }
+        .box {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            border: 1px solid #eeeeee;
+        }
+        
+        /* 日期選擇器與歷史紀錄分欄排版 */
+        .date-section {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .date-picker-box {
+            flex: 1;
+            min-width: 280px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+        .history-box {
+            flex: 1;
+            min-width: 280px;
+            background: #fff8e1;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #ffe082;
+        }
+
+        input[type="text"] {
+            padding: 8px;
+            font-size: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        /* 控制日期選單（DatePicker）彈窗內部的深藍色主題 */
+        input[type="date"] {
+            padding: 8px;
+            font-size: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            accent-color: #002b66; /* 將彈出的日曆選用色改為深藍色 */
+        }
+
+        button {
+            padding: 8px 12px;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            margin-left: 3px;
+            transition: 0.2s;
+        }
+        
+        /* 深藍色確認按鈕 */
+        .btn-save { 
+            background-color: #002b66; 
+            color: white; 
+            font-weight: bold; 
+            width: 100%; 
+            margin-top: 10px; 
+            padding: 10px; 
+        }
+        .btn-save:hover {
+            background-color: #001f4d;
+        }
+
+        .btn-add { background-color: #6c757d; color: white; }
+        .btn-present { background-color: #198754; color: white; }
+        .btn-absent { background-color: #dc3545; color: white; }
+        .btn-late { background-color: #ffc107; color: black; }
+
+        /* 歷史日期按鈕標籤 */
+        .date-tag {
+            display: inline-block;
+            background-color: #ffb74d;
+            color: #333;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 13px;
+            margin: 3px;
+            cursor: pointer;
+        }
+        .date-tag:hover { background-color: #ffa726; }
+
+        .student-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .detail-box {
+            display: flex;
+            gap: 20px;
+        }
+        .detail-card {
+            flex: 1;
+            padding: 12px;
+            border-radius: 6px;
+            min-height: 80px;
+        }
+        .bg-present { background-color: #e8f5e9; border: 1px solid #c8e6c9; }
+        .bg-absent { background-color: #ffebee; border: 1px solid #ffcdd2; }
+    </style>
+</head>
+<body>
+
+    <h2>📋 課堂點名與歷史紀錄系統</h2>
+
+    <!-- 1. 日期選擇與歷史紀錄區塊 -->
+    <div class="box date-section">
+        <!-- 左邊：日期選擇器與深藍色確認按鈕 -->
+        <div class="date-picker-box">
+            <label for="rollcallDate"><strong>📅 選擇點名日期：</strong></label><br><br>
+            <input type="date" id="rollcallDate" onchange="changeDate()" style="width: 90%;">
+            
+            <!-- 深藍色確認按鈕 -->
+            <button class="btn-save" onclick="confirmSave()">✔️ 確認紀錄／儲存本頁點名</button>
+        </div>
+
+        <!-- 右邊：歷史已點名日期列表 -->
+        <div class="history-box">
+            <strong style="color: #d97706;">📜 已點名過的日子：</strong>
+            <div id="historyDateList" style="margin-top: 10px;">
+                <span style="color:#888; font-size:13px;">目前尚無歷史紀錄</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. 新增學生 -->
+    <div class="box">
+        <h3>新增學生到班級名單</h3>
+        <input type="text" id="nameInput" placeholder="輸入學生名字..." style="width: 65%;">
+        <button class="btn-add" onclick="addStudent()">新增學生</button>
+    </div>
+
+    <!-- 3. 點名列表 -->
+    <div class="box">
+        <h3 id="currentDateTitle">學生點名列表</h3>
+        <div id="studentList"></div>
+    </div>
+
+    <!-- 4. 詳細名單區塊 -->
+    <div class="box">
+        <h3>本日點名結果名單</h3>
+        <div class="detail-box">
+            <div class="detail-card bg-present">
+                <h4 style="color: #198754; margin-top:0;">✅ 出席學生：</h4>
+                <div id="presentNames">無</div>
+            </div>
+            <div class="detail-card bg-absent">
+                <h4 style="color: #dc3545; margin-top:0;">❌ 缺席學生：</h4>
+                <div id="absentNames">無</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 預設學生名單
+        let studentNames = ["張小明", "李小華", "王大同"];
+        
+        // 紀錄格式：{ "2026-09-23": { "張小明": "present", "李小華": "absent" } }
+        let attendanceData = {};
+
+        // 設定預設日期為今天
+        const dateInput = document.getElementById("rollcallDate");
+        dateInput.value = new Date().toISOString().split('T')[0];
+
+        // 頁面初始化
+        loadData();
+        renderList();
+        renderHistoryDates();
+
+        // 改變日期事件處理
+        function changeDate() {
+            renderList();
+        }
+
+        // 切換至歷史日期的快速按鈕
+        function selectHistoryDate(selectedDate) {
+            dateInput.value = selectedDate;
+            renderList();
+        }
+
+        // 新增學生
+        function addStudent() {
+            let input = document.getElementById("nameInput");
+            let name = input.value.trim();
+            if (name === "") return alert("請輸入學生姓名！");
+            if (studentNames.includes(name)) return alert("該學生已在名單中！");
+
+            studentNames.push(name);
+            input.value = "";
+            saveData();
+            renderList();
+        }
+
+        // 設定學生狀態
+        function setStatus(name, status) {
+            let currentDate = dateInput.value;
+            if (!attendanceData[currentDate]) {
+                attendanceData[currentDate] = {};
+            }
+            
+            attendanceData[currentDate][name] = status;
+            saveData();
+            renderList();
+            renderHistoryDates();
+        }
+
+        // 按下「確認紀錄 / 儲存」按鈕
+        function confirmSave() {
+            let currentDate = dateInput.value;
+            saveData();
+            renderHistoryDates();
+            alert("【" + currentDate + "】的點名紀錄已成功確認並儲存！");
+        }
+
+        // 渲染列表與點名狀況
+        function renderList() {
+            let currentDate = dateInput.value;
+            document.getElementById("currentDateTitle").innerText = "學生點名列表（" + currentDate + "）";
+            
+            let currentRecord = attendanceData[currentDate] || {};
+            let listDiv = document.getElementById("studentList");
+            listDiv.innerHTML = "";
+
+            let presentList = [];
+            let absentList = [];
+
+            studentNames.forEach(name => {
+                let status = currentRecord[name] || "unset";
+
+                let statusText = "（未點名）";
+                if (status === "present") { statusText = "（出席）"; presentList.push(name); }
+                if (status === "absent") { statusText = "（缺席）"; absentList.push(name); }
+                if (status === "late") { statusText = "（遲到）"; presentList.push(name + "[遲到]"); }
+
+                let item = document.createElement("div");
+                item.className = "student-item";
+                item.innerHTML = `
+                    <span><strong>${name}</strong> <small style="color:#666;">${statusText}</small></span>
+                    <div>
+                        <button class="btn-present" onclick="setStatus('${name}', 'present')">出席</button>
+                        <button class="btn-absent" onclick="setStatus('${name}', 'absent')">缺席</button>
+                        <button class="btn-late" onclick="setStatus('${name}', 'late')">遲到</button>
+                    </div>
+                `;
+                listDiv.appendChild(item);
+            });
+
+            // 更新下方的出席/缺席文字名單
+            document.getElementById("presentNames").innerText = presentList.length > 0 ? presentList.join("、") : "無";
+            document.getElementById("absentNames").innerText = absentList.length > 0 ? absentList.join("、") : "無";
+        }
+
+        // 繪製「歷史點名過的日子」標籤
+        function renderHistoryDates() {
+            let historyDiv = document.getElementById("historyDateList");
+            let dates = Object.keys(attendanceData).filter(d => Object.keys(attendanceData[d]).length > 0);
+
+            if (dates.length === 0) {
+                historyDiv.innerHTML = `<span style="color:#888; font-size:13px;">目前尚無歷史紀錄</span>`;
+                return;
+            }
+
+            historyDiv.innerHTML = "";
+            dates.sort().reverse().forEach(d => {
+                let tag = document.createElement("span");
+                tag.className = "date-tag";
+                tag.innerText = d;
+                tag.onclick = function() { selectHistoryDate(d); };
+                historyDiv.appendChild(tag);
+            });
+        }
+
+        // 儲存資料至瀏覽器快取
+        function saveData() {
+            localStorage.setItem("rollcall_students", JSON.stringify(studentNames));
+            localStorage.setItem("rollcall_data", JSON.stringify(attendanceData));
+        }
+
+        // 讀取歷史資料
+        function loadData() {
+            let savedStudents = localStorage.getItem("rollcall_students");
+            let savedData = localStorage.getItem("rollcall_data");
+
+            if (savedStudents) studentNames = JSON.parse(savedStudents);
+            if (savedData) attendanceData = JSON.parse(savedData);
+        }
+    </script>
+</body>
+</html>
