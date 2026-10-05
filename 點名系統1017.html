@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>班級綜合管理系統</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 950px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #ffffff;
+        }
+        
+        /* 頂部導覽頁籤 (Tab) */
+        .tab-menu {
+            display: flex;
+            border-bottom: 2px solid #002b66;
+            margin-bottom: 20px;
+        }
+        .tab-btn {
+            padding: 12px 24px;
+            cursor: pointer;
+            border: none;
+            background: #f1f3f5;
+            font-size: 16px;
+            font-weight: bold;
+            color: #495057;
+            border-radius: 8px 8px 0 0;
+            margin-right: 5px;
+            transition: 0.2s;
+        }
+        .tab-btn.active {
+            background: #002b66;
+            color: white;
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .box {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            border: 1px solid #eeeeee;
+        }
+
+        input[type="text"], input[type="number"] {
+            padding: 8px;
+            font-size: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        input[type="date"] {
+            padding: 8px;
+            font-size: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            accent-color: #002b66;
+        }
+
+        button {
+            padding: 8px 12px;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            transition: 0.2s;
+        }
+        
+        .btn-main { background-color: #002b66; color: white; font-weight: bold; }
+        .btn-main:hover { background-color: #001f4d; }
+        .btn-auto { background-color: #0d6efd; color: white; font-weight: bold; }
+        .btn-auto:hover { background-color: #0b5ed7; }
+        .btn-add { background-color: #6c757d; color: white; }
+        .btn-present { background-color: #198754; color: white; }
+        .btn-absent { background-color: #dc3545; color: white; }
+        .btn-leave { background-color: #fd7e14; color: white; }
+
+        .student-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        /* 表格樣式 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            text-align: center;
+        }
+        th { background-color: #f8f9fa; }
+
+        .clickable-name {
+            color: #0d6efd;
+            text-decoration: underline;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .clickable-name:hover { color: #0a58ca; }
+
+        /* Modal 彈出視窗 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>🏫 班級教務與管理系統</h2>
+
+    <!-- 分頁導覽按鈕 -->
+    <div class="tab-menu">
+        <button class="tab-btn active" onclick="switchTab('tab-rollcall')">📋 課堂點名系統</button>
+        <button class="tab-btn" onclick="switchTab('tab-leave')">📅 請假統計系統</button>
+        <button class="tab-btn" onclick="switchTab('tab-grades')">📊 成績計算系統</button>
+    </div>
+
+    <!-- ==================== 分頁 1：課堂點名系統 ==================== -->
+    <div id="tab-rollcall" class="tab-content active">
+        <div class="box">
+            <label for="rollcallDate"><strong>📅 選擇點名日期：</strong></label>
+            <input type="date" id="rollcallDate" onchange="renderRollcall()">
+            <button class="btn-main" onclick="confirmSave()" style="margin-left:10px;">✔️ 儲存點名紀錄</button>
+        </div>
+
+        <div class="box">
+            <h3>新增學生名單</h3>
+            <input type="text" id="nameInput" placeholder="輸入學生名字..." style="width: 60%;">
+            <button class="btn-add" onclick="addStudent()">新增學生</button>
+        </div>
+
+        <div class="box">
+            <h3 id="currentDateTitle">學生點名列表</h3>
+            <div id="studentList"></div>
+        </div>
+    </div>
+
+    <!-- ==================== 分頁 2：請假統計系統 ==================== -->
+    <div id="tab-leave" class="tab-content">
+        <div class="box">
+            <h3>📅 時間段查詢 / 學期統計</h3>
+            <label>開始日期：<input type="date" id="startDate"></label>
+            <label style="margin-left:10px;">結束日期：<input type="date" id="endDate"></label>
+            <button class="btn-main" onclick="renderLeaveStats()" style="margin-left:10px;">🔍 查詢統計</button>
+        </div>
+
+        <div class="box">
+            <h3>學生請假總覽（點擊姓名可看個人詳細紀錄）</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>學生姓名</th>
+                        <th>事假</th>
+                        <th>病假</th>
+                        <th>公假</th>
+                        <th>喪假 / 缺席</th>
+                        <th>總請假次數</th>
+                    </tr>
+                </thead>
+                <tbody id="leaveStatsTable"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ==================== 分頁 3：成績計算系統 ==================== -->
+    <div id="tab-grades" class="tab-content">
+        <div class="box">
+            <h3>⚙️ 成績加權配分設定（%）</h3>
+            <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                <label>期中考 (30%): <input type="number" id="wMid" value="30" min="0" max="100" style="width:60px;"></label>
+                <label>期末考 (30%): <input type="number" id="wFinal" value="30" min="0" max="100" style="width:60px;"></label>
+                <label>出席率 (20%): <input type="number" id="wAtt" value="20" min="0" max="100" style="width:60px;"></label>
+                <label>作業 (20%): <input type="number" id="wHw" value="20" min="0" max="100" style="width:60px;"></label>
+            </div>
+            <div style="margin-top: 15px;">
+                <button class="btn-auto" onclick="autoCalculateAttendance()">⚡ 根據點名紀錄自動計算出席率</button>
+                <button class="btn-main" onclick="calculateAllGrades()" style="margin-left:10px;">🔄 計算學期總成績</button>
+            </div>
+            <small style="color:#666; display:block; margin-top:8px;">（預設規則：基礎 100 分，缺席一次 -10 分、事假/病假 -5 分，公喪假不扣分）</small>
+        </div>
+
+        <div class="box">
+            <h3>💯 學生成績登記表</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>學生姓名</th>
+                        <th>期中分數</th>
+                        <th>期末分數</th>
+                        <th>出席率分數</th>
+                        <th>作業分數</th>
+                        <th>學期總分</th>
+                        <th>等第</th>
+                    </tr>
+                </thead>
+                <tbody id="gradeTable"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 學生個人請假紀錄 彈出視窗 -->
+    <div id="studentModal" class="modal">
+        <div class="modal-content">
+            <h3 id="modalStudentName">學生請假詳情</h3>
+            <div id="modalDetailContent"></div>
+            <br>
+            <button class="btn-main" onclick="closeModal()" style="width:100%;">關閉</button>
+        </div>
+    </div>
+
+    <script>
+        // 全域資料
+        let studentNames = ["張小明", "李小華", "王大同"];
+        let attendanceData = {}; 
+        let gradeData = {};      
+
+        // 初始化日期為今日
+        const dateInput = document.getElementById("rollcallDate");
+        dateInput.value = new Date().toISOString().split('T')[0];
+
+        // 載入儲存的資料並初始化頁面
+        loadData();
+        renderRollcall();
+
+        // 頁籤切換
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+
+            if(tabId === 'tab-leave') renderLeaveStats();
+            if(tabId === 'tab-grades') renderGradeTable();
+        }
+
+        // --- 點名功能 ---
+        function renderRollcall() {
+            let currentDate = dateInput.value;
+            document.getElementById("currentDateTitle").innerText = "學生點名列表（" + currentDate + "）";
+            let currentRecord = attendanceData[currentDate] || {};
+            let listDiv = document.getElementById("studentList");
+            listDiv.innerHTML = "";
+
+            studentNames.forEach(name => {
+                let record = currentRecord[name] || { status: "unset" };
+                let statusText = "（未點名）";
+                if (record.status === "present") statusText = "（出席）";
+                if (record.status === "absent") statusText = "（缺席）";
+                if (record.status === "leave") statusText = `（請假：${record.leaveType || '事假'}）`;
+
+                let item = document.createElement("div");
+                item.className = "student-item";
+                item.innerHTML = `
+                    <span><strong>${name}</strong> <small style="color:#666;">${statusText}</small></span>
+                    <div>
+                        <button class="btn-present" onclick="setRollcall('${name}', 'present')">出席</button>
+                        <button class="btn-absent" onclick="setRollcall('${name}', 'absent')">缺席</button>
+                        <button class="btn-leave" onclick="promptLeave('${name}')">請假</button>
+                    </div>
+                `;
+                listDiv.appendChild(item);
+            });
+        }
+
+        function setRollcall(name, status, leaveType = "") {
+            let currentDate = dateInput.value;
+            if (!attendanceData[currentDate]) attendanceData[currentDate] = {};
+            attendanceData[currentDate][name] = { status, leaveType };
+            saveData();
+            renderRollcall();
+        }
+
+        function promptLeave(name) {
+            let type = prompt(`請輸入 ${name} 的請假類別（事假 / 病假 / 公假 / 喪假）：`, "事假");
+            if (type) setRollcall(name, "leave", type);
+        }
+
+        function addStudent() {
+            let name = document.getElementById("nameInput").value.trim();
+            if (!name) return alert("請輸入姓名！");
+            if (studentNames.includes(name)) return alert("學生已存在！");
+            studentNames.push(name);
+            document.getElementById("nameInput").value = "";
+            saveData();
+            renderRollcall();
+        }
+
+        function confirmSave() {
+            saveData();
+            alert("點名資料已成功永久儲存！");
+        }
+
+        // --- 請假統計功能 ---
+        function renderLeaveStats() {
+            let start = document.getElementById("startDate").value;
+            let end = document.getElementById("endDate").value;
+            let tbody = document.getElementById("leaveStatsTable");
+            tbody.innerHTML = "";
+
+            studentNames.forEach(name => {
+                let counts = { 事假: 0, 病假: 0, 公假: 0, 喪假: 0, 缺席: 0 };
+                
+                Object.keys(attendanceData).forEach(date => {
+                    if ((!start || date >= start) && (!end || date <= end)) {
+                        let rec = attendanceData[date][name];
+                        if (rec) {
+                            if (rec.status === 'leave' && counts[rec.leaveType] !== undefined) counts[rec.leaveType]++;
+                            if (rec.status === 'absent') counts["缺席"]++;
+                        }
+                    }
+                });
+
+                let total = Object.values(counts).reduce((a,b)=>a+b, 0);
+
+                let tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td><span class="clickable-name" onclick="showStudentModal('${name}')">${name}</span></td>
+                    <td>${counts['事假']}</td>
+                    <td>${counts['病假']}</td>
+                    <td>${counts['公假']}</td>
+                    <td>${counts['喪假'] + counts['缺席']}</td>
+                    <td><strong>${total} 次</strong></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function showStudentModal(name) {
+            document.getElementById("modalStudentName").innerText = `📌 ${name} - 請假歷史紀錄`;
+            let modalContent = document.getElementById("modalDetailContent");
+            modalContent.innerHTML = "";
+
+            let logs = [];
+            Object.keys(attendanceData).sort().forEach(date => {
+                let rec = attendanceData[date][name];
+                if (rec && (rec.status === 'leave' || rec.status === 'absent')) {
+                    let type = rec.status === 'absent' ? '缺席' : rec.leaveType;
+                    logs.push(`<li><strong>${date}</strong>：${type}</li>`);
+                }
+            });
+
+            if (logs.length === 0) {
+                modalContent.innerHTML = "<p style='color:#28a745;'>🎉 該學生無任何缺席或請假紀錄！</p>";
+            } else {
+                modalContent.innerHTML = `<ul style="line-height: 1.8;">${logs.join("")}</ul>`;
+            }
+
+            document.getElementById("studentModal").style.display = "flex";
+        }
+
+        function closeModal() {
+            document.getElementById("studentModal").style.display = "none";
+        }
+
+        // --- 成績計算功能 ---
+        function renderGradeTable() {
+            let tbody = document.getElementById("gradeTable");
+            tbody.innerHTML = "";
+
+            studentNames.forEach(name => {
+                let g = gradeData[name] || { mid: 0, final: 0, att: 100, hw: 0, total: 0, rank: "-" };
+
+                let tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td><strong>${name}</strong></td>
+                    <td><input type="number" min="0" max="100" value="${g.mid}" onchange="updateScore('${name}', 'mid', this.value)" style="width:65px;"></td>
+                    <td><input type="number" min="0" max="100" value="${g.final}" onchange="updateScore('${name}', 'final', this.value)" style="width:65px;"></td>
+                    <td><input type="number" min="0" max="100" value="${g.att !== undefined ? g.att : 100}" onchange="updateScore('${name}', 'att', this.value)" style="width:65px;"></td>
+                    <td><input type="number" min="0" max="100" value="${g.hw}" onchange="updateScore('${name}', 'hw', this.value)" style="width:65px;"></td>
+                    <td id="total-${name}"><strong>${g.total || 0}</strong></td>
+                    <td id="rank-${name}">${g.rank || '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateScore(name, field, val) {
+            if (!gradeData[name]) gradeData[name] = { mid: 0, final: 0, att: 100, hw: 0 };
+            gradeData[name][field] = parseFloat(val) || 0;
+            saveData();
+        }
+
+        // 自動根據點名歷史計算出席率分數
+        function autoCalculateAttendance() {
+            studentNames.forEach(name => {
+                let score = 100;
+                Object.keys(attendanceData).forEach(date => {
+                    let rec = attendanceData[date][name];
+                    if (rec) {
+                        if (rec.status === 'absent') score -= 10; // 缺席扣 10 分
+                        if (rec.status === 'leave' && (rec.leaveType === '事假' || rec.leaveType === '病假')) score -= 5; // 事/病假扣 5 分
+                    }
+                });
+                if (score < 0) score = 0;
+                if (!gradeData[name]) gradeData[name] = { mid: 0, final: 0, att: 100, hw: 0 };
+                gradeData[name].att = score;
+            });
+            saveData();
+            renderGradeTable();
+            alert("已成功根據所有點名紀錄，自動算好全班出席率分數！");
+        }
+
+        function calculateAllGrades() {
+            let wMid = (parseFloat(document.getElementById("wMid").value) || 0) / 100;
+            let wFinal = (parseFloat(document.getElementById("wFinal").value) || 0) / 100;
+            let wAtt = (parseFloat(document.getElementById("wAtt").value) || 0) / 100;
+            let wHw = (parseFloat(document.getElementById("wHw").value) || 0) / 100;
+
+            studentNames.forEach(name => {
+                let g = gradeData[name] || { mid: 0, final: 0, att: 100, hw: 0 };
+                let total = (g.mid * wMid) + (g.final * wFinal) + ((g.att !== undefined ? g.att : 100) * wAtt) + (g.hw * wHw);
+                total = Math.round(total * 10) / 10; 
+
+                let rank = "F";
+                if (total >= 90) rank = "A+";
+                else if (total >= 80) rank = "A";
+                else if (total >= 70) rank = "B";
+                else if (total >= 60) rank = "C";
+
+                g.total = total;
+                g.rank = rank;
+                gradeData[name] = g;
+            });
+
+            saveData();
+            renderGradeTable();
+            alert("學期總成績已計算完成並儲存！");
+        }
+
+        // --- 本地快取儲存機制 (LocalStorage) ---
+        function saveData() {
+            localStorage.setItem("rollcall_students", JSON.stringify(studentNames));
+            localStorage.setItem("rollcall_data", JSON.stringify(attendanceData));
+            localStorage.setItem("rollcall_grades", JSON.stringify(gradeData));
+        }
+
+        function loadData() {
+            let s = localStorage.getItem("rollcall_students");
+            let d = localStorage.getItem("rollcall_data");
+            let g = localStorage.getItem("rollcall_grades");
+            if (s) studentNames = JSON.parse(s);
+            if (d) attendanceData = JSON.parse(d);
+            if (g) gradeData = JSON.parse(g);
+        }
+    </script>
+</body>
+</html>
